@@ -1,35 +1,36 @@
 use clap::Parser;
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 
 #[derive(Parser)]
+#[command(version, about, long_about = None)]
 struct Cli {
-    path: std::path::PathBuf,
+    path: PathBuf,
+    outpath: Option<PathBuf>,
 }
 
 fn main() {
-    // let args: Vec<_> = std::env::args().collect();
     let my_args = Cli::parse();
-
-    println!("pattern: , path {:?}", my_args.path);
-
-    // if args.len() < 2 {
-    //     eprintln!("Incorrect use of the tool")
-    // }
 
     let file_name = std::path::Path::new(&my_args.path);
     let file = fs::File::open(&file_name).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
+    //TODO: add cutsom output path for entire file
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).unwrap();
-        let outpath = match file.enclosed_name() {
-            Some(path) => path.to_owned(),
-            None => continue,
-        };
 
+        let outpath = match &my_args.outpath {
+            Some(p) => p,
+            None => match file.enclosed_name() {
+                Some(path) => path,
+                None => continue,
+            },
+        };
+        println!("OutPath: {:?}", outpath);
         if (*file.name()).ends_with('/') {
-            println!("Extracting {} to {} ", i, outpath.display());
+            println!("Extracting {} to {} ", file.name(), outpath.display());
             fs::create_dir_all(&outpath).unwrap();
         } else {
             if let Some(p) = outpath.parent() {
@@ -41,4 +42,5 @@ fn main() {
             io::copy(&mut file, &mut outfile).unwrap();
         }
     }
+    println!("Completed")
 }
