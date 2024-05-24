@@ -17,20 +17,22 @@ fn main() {
     let file = fs::File::open(&file_name).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
-    //TODO: add cutsom output path for entire file
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).unwrap();
 
         let outpath = match &my_args.outpath {
-            Some(p) => p,
+            Some(p) => {
+                let mut mypath = PathBuf::from(p);
+                mypath.push(file.enclosed_name().unwrap());
+                mypath
+            }
             None => match file.enclosed_name() {
-                Some(path) => path,
+                Some(path) => path.to_path_buf(),
                 None => continue,
             },
         };
-        println!("OutPath: {:?}", outpath);
+        println!("Extracting {} to {} ", file.name(), outpath.display());
         if (*file.name()).ends_with('/') {
-            println!("Extracting {} to {} ", file.name(), outpath.display());
             fs::create_dir_all(&outpath).unwrap();
         } else {
             if let Some(p) = outpath.parent() {
